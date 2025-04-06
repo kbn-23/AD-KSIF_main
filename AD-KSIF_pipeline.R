@@ -112,6 +112,7 @@ for(i in 1:bin.num){
 }
 
 ##--------------------result output--------------------##
+setwd('<PRINT_YOUR_PATH_TO_RESULT_FILE_HERE>')
 result<-cbind(EDindexes,StaFunc)
 colnames(result)<-c("X","Y","Rho","Theta")
 write.csv(result,"result.csv",quote=F)
