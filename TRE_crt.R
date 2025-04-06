@@ -1,16 +1,16 @@
 Tree_Construction<-function(df){
   library(ape)
-  #多序列比对
+  #multi-sequence alignment
   aln <- muscle::muscle(df)
-  #序列修剪
+  #sequence trimming
   auto <- maskGaps(aln, min.fraction=0.5, min.block.width=4)
-  #比对文件输出
+  #alignment file output
   DNAStr = as(auto, "DNAStringSet")
   writeXStringSet(DNAStr, file="alignment.fasta")
-  #比对文件序列整理
+  #integration of alignment results
   otu_seq3 <- read.table("alignment.fasta", header = F, sep = "\n")
   otu_seq3$V1[2]
-  #获得分段数
+  #obtain the fragments
   for (i in 1:nrow(otu_seq3)){
     if(grepl('>',otu_seq3$V1[i])){
       i<-i+1
@@ -21,7 +21,7 @@ Tree_Construction<-function(df){
       break  
     }
   }
-  #拼接完整序列
+  #sequence assembly
   if(cycle > 2){
     for (i in 1:nrow(otu_seq3)){
       if(i %% cycle==2)
@@ -36,9 +36,9 @@ Tree_Construction<-function(df){
     otu_seq4 <- otu_seq3$V1
   }
   write.table(otu_seq4,"otu_seq_alignment.fasta",row.names=FALSE,col.names=FALSE,quote=F)
-  #NJ法建立系统发育树并输出
+  #phylogenetic tree construction by NJ method
   df<-read.dna("otu_seq_alignment.fasta", format = "fasta")
-  df.distance <- dist.dna(df, model = "TS")
+  df.distance <- dist.dna(df, model = "K80")
   tree <- nj(df.distance)
   return(tree)
 }
