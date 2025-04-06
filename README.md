@@ -4,8 +4,6 @@
 
 Development of keystone species identificationoffers fundamental force for transformative synthetic microbial community applicationto meet the controllability demand of modern engineering systems, yet the lackof underlying mechanisms support and limited information for functionalcategorization build barriers in module embedding. Raising the key idea ofhighlighting keystone species by characteristic assembly trajectories, thenallocating the species into annotated functional categories, here we propose anovel assembly-driven keystone species identification framework (AD-KSIF) toresolve the challenge. Validated by real community datasets from 6 watertreatment engineering systems, AD-KSIF outperforming the mainstream baselinemodel and exhibits robustness against the community stochasticity. The outputsfrom AD-KSIF enable us to pick cross-system conserved keystone species againstthe disruption of insufficient domestication, and to link them into diversefunctional modules of minimal genome-scale metabolic reconstruction. Thepresented framework demonstrates the sensitivity of environment-communityinteraction marks and the power of introducing transparent principles intonumeric ecological modelling, paving the way for the systematically data-drivenmanagement of next-generation engineering synthetic microbial community design.
 
-<img src="file:///C:/Users/28292/Pictures/Typedown/9f895144-658a-4a2a-a369-1c3886e331e3.png" title="" alt="9f895144-658a-4a2a-a369-1c3886e331e3" data-align="center">
-
 ## 2. Preparation for AD-KSIF pipeline
 
 ### 2.1 R packages
