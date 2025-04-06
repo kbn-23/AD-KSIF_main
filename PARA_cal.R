@@ -1,28 +1,26 @@
 beta_NTI <- function(otu,phylo,n){
-  #加载这个数据包 
   library(picante)
-  #确保系统发育树上的名称与 otu表中的名称排序一致 
+  #ensure the consistence of the ID in phylogenetic tree and the OTU table
   match.phylo.otu = match.phylo.data(phylo, otu)  
-  #计算 betaMNTD，这里 abundance.weighted=T表示考虑物种丰度，如果不设定该参数，则默认 abundance.weighted=F，不考虑物种丰度 
+  #observed betaMNTD calculation, where abundance.weighted=T is for considering the OTU abundance (default = F).
   beta.mntd.weighted = as.matrix(comdistnt(t(match.phylo.otu$data),cophenetic(match.phylo.otu$phy),abundance.weighted=T))  
-  #检查 beta.mntd.weighted矩阵中的列名是否和系统发育树以及 OTU表中一致，结果应该为 T 
-  identical(colnames(match.phylo.otu$data),colnames(beta.mntd.weighted)) 
-  #同上，只是一个检查，结果应该为 T 
-  identical(colnames(match.phylo.otu$data),rownames(beta.mntd.weighted))  
-  ##计算 betaMNTD随机值 
-  #随机化次数 
+  #ID check
+  #identical(colnames(match.phylo.otu$data),colnames(beta.mntd.weighted)) 
+  #identical(colnames(match.phylo.otu$data),rownames(beta.mntd.weighted))
+  
+  ##null model betaMNTD calculation
+  #set repeats of randomization 
   beta.reps = n
+  #null model generation
   rand.weighted.bMNTD.comp=array(c(-999),dim=c(ncol(match.phylo.otu$data),ncol(match.phylo.otu$data),beta.reps)); 
   for (rep in 1: beta.reps) { 
-    #这一步执行的随机化是基于对系统发育树中 OTU标签的随机重排进行的，如果沿用 1中的方法对每 一个群落进行随机构建后再计算 betaMNTD,则可以选择使用rand.weighted.bMNTD.comp[,,rep] = as.matrix(comdistnt(randomizeMatrix(comun, null.model = c("frequency", "richness","independentswap", "trialswap"), iterations = 1000),cophenetic(match.phylo.comun$phy),abundance.weighted=T ,exclude.conspecifics = F))命令完成该步运算 
     rand.weighted.bMNTD.comp[,,rep] = as.matrix(comdistnt(t(match.phylo.otu$data),taxaShuffle(cophenetic(match.phylo.otu$phy)),abundance.weighted=T ,exclude.conspecifics = F));  
     print(c(date(),rep)); 
   } 
-  ##计算 βNTI 
+  ##βNTI calculation
   weighted.bNTI = matrix(0,nrow=ncol(match.phylo.otu$data),ncol=ncol(match.phylo.otu$data)); 
   for (columns in 1:(ncol(match.phylo.otu$data)-1)) { 
-    for (rows in (columns+1): ncol(match.phylo.otu$data)) { 
-      #按照 βNTI计算公式计算每一对样本间的 βNTI值 
+    for (rows in (columns+1): ncol(match.phylo.otu$data)) {
       rand.vals = rand.weighted.bMNTD.comp[rows,columns,]; 
       weighted.bNTI[rows,columns] = (beta.mntd.weighted[rows,columns] - mean(rand.vals)) / sd(rand.vals); 
       rm("rand.vals"); 
@@ -40,29 +38,30 @@ beta_NTI <- function(otu,phylo,n){
 RC_BC<-function(x,n){
   x = t(x)
   gamma<-ncol(x)
-  #获得OTU存在性矩阵
+  #obtain 0-1 matirx for OTU existence
   x.inc<-ceiling(x / max(x))
   RC<-matrix(rep(0,nrow(x)*nrow(x)),nrow(x),nrow(x))
   dimnames(RC)<-list(rownames(x),rownames(x))
-  #获得样本物种数量
+  #number of OTUs
   occur <- apply(x.inc, MARGIN = 2, FUN = sum)
-  #获得样本丰度分布
+  #distrubution of OTU abundance in sample
   abundance <- apply(x, MARGIN = 2, FUN = sum)
   library(foreach)
   library(doParallel)
   for (null.one in 1:(nrow(x) - 1)) {
     for (null.two in (null.one + 1):nrow(x)) {
-      #获得样本间空模型BC距离期望
+      #calculate expectation of Bray-Curtis distance between null models
       null_bray_curtis <- NULL
       null_bray_curtis <- foreach (i = 1:n,.combine = "c") %dopar%{
         library(vegan)
+        #generate null com 1
         com1<-rep(0,gamma)
-        #确定存在性条件
+        #existence condition
         com1[sample(1:gamma,
                     sum(x.inc[null.one, ]),
                     replace = FALSE,
                     prob = occur)] <- 1
-        #赋予丰度值
+        #assign abundance value
         com1.samp.sp = sample(which(com1 > 0),
                               (sum(x[null.one, ]) - sum(com1)),
                               replace = TRUE,
@@ -72,7 +71,7 @@ RC_BC<-function(x,n){
         colnames(com1.sp.counts) = 'counts'
         com1.sp.counts$sp = as.numeric(rownames(com1.sp.counts))
         com1[com1.sp.counts$sp] = com1[com1.sp.counts$sp] + com1.sp.counts$counts
-        #按同样方法生成com2
+        #generate com2 by the same algorithm
         com2<-rep(0,gamma)
         com2[sample(1:gamma,
                     sum(x.inc[null.two, ]),
@@ -92,16 +91,16 @@ RC_BC<-function(x,n){
         null.x<-rbind(com1,com2)
         null_bray_curtis = vegdist(null.x, method = 'bray')
       }
-      #获得实际群落样本间BC距离
+      #calculate observed Bray-Curtis distance between samples
       obs.bray = vegdist(x[c(null.one, null.two), ], method = 'bray')
-      #预期值低于实际值的数量
+      #extract the number of the observed results lower than null model expectation
       num_less_than_in_null = sum(null_bray_curtis < obs.bray)
-      #令计算结果包含等于预期值的数量
       num_exact_matching_in_null = sum(null_bray_curtis == obs.bray)
+      #RC bray-curtis calculation
       RC[null.two,null.one]=((
         num_less_than_in_null + (num_exact_matching_in_null) / 2
       ) / n)
-      #标准化到[-1,1]之间
+      #normalization
       RC[null.two,null.one] = (RC[null.two,null.one] - .5) * 2
       print(c(date(),null.two))
     }
@@ -115,14 +114,12 @@ RC_BC<-function(x,n){
 
 
 X_Y<-function(otu,bNTI,RC){
-  #替换缺省值
-
-  #子组内各样本的相对丰度
+  #relative abundance in bins
   relativeab.samp<-matrix(0,1,ncol(otu))
   relativeab.samp[1,]=colSums(otu)/sum(otu)
   abweighted_bNTI<-0
   total_weight<-0
-  #计算进化指数
+  #evolution index calculation
   for (i in 1:(ncol(otu)-1)){
     for (j in (i+1):ncol(otu)){
       if(bNTI[j,i]!=0){
@@ -132,7 +129,7 @@ X_Y<-function(otu,bNTI,RC){
     }
   }
   X<-abweighted_bNTI/total_weight
-  #计算扩散指数
+  #dispersal index calculation
   abweighted_RC<-0
   total_weight<-0
   for (i in 1:(ncol(otu)-1)){
@@ -144,7 +141,7 @@ X_Y<-function(otu,bNTI,RC){
     }
   }
   Y<-abweighted_RC/total_weight
-  #标准化
+  # normalization
   Standard_X<-X/1.96
   Standard_Y<-Y/0.95
   X_Y<-rep(0,2)
@@ -158,6 +155,7 @@ X_Y<-function(otu,bNTI,RC){
 
 
 Rho_Theta<-function(XY){
+  #coordinate transformation
   X=XY[1]
   Y=XY[2]
   rho_theta<-rep(0,2)
